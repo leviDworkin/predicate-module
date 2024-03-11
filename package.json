@@ -1,0 +1,16 @@
+{
+  "license":"MIT",
+  "scripts": {
+    "prepare": "yarn run build-ts",
+    "build-ts": "tsc index.ts",
+    "build": "yarn run build-ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.2"
+  },
+  "dependencies": {
+    "@types/node": "^20.11.25",
+    "dotenv": "^16.4.5",
+    "dotenv-safe": "^9.1.0"
+  }
+}

@@ -1,0 +1,100 @@
+import Operation from "./Operation";
+import {OperatorTypes} from "./OperatorTypes";
+
+interface PredicateProp{
+    feature:string;
+    operation:Operation;
+}
+
+export default class Predicate{
+
+    private feature:string;
+    private operation:Operation;
+    private featureArr:Array<string>;
+    
+    constructor({feature,operation}:PredicateProp){
+        this.feature = feature;
+        this.featureArr = feature === "" ? [] : feature.split(".");
+        this.operation = {...operation};
+    }
+
+
+    public static from_json(json_string:string):Predicate{
+        try{
+            return new Predicate(JSON.parse(json_string));
+        }catch(error){
+            throw new Error("Parsing Json failed, please verify the predicate json string is valid");
+        }
+    }
+
+    public evaluate(root:any):boolean{
+        
+        const getNestedObj = (obj:any):any=>{
+            if(this.featureArr.length === 0){
+                return obj;
+            }
+            let current = obj;
+            for(let i=1; i<this.featureArr.length; i++){
+                if(!current.hasOwnProperty(this.featureArr[i])){
+                    throw new Error("Property does not exist in nested object");
+                }
+                current = current[this.featureArr[i]];
+            }
+            return current;
+        }
+
+        const testFeature = (operator:OperatorTypes,operand:any,feat:any):boolean=>{
+            switch(operator){
+                case OperatorTypes.isNone:
+                    return feat == null;
+                case OperatorTypes.isNotNone:
+                    return feat != null;
+                case OperatorTypes.isGreaterThan:
+                    return feat > operand;
+                case OperatorTypes.isLessThan:
+                    return feat < operand;
+                case OperatorTypes.eqTo:
+                    return feat === operand;
+                case OperatorTypes.notEqTo:
+                    return feat !== operand;
+                default:
+                    return false;
+            }
+        }
+
+        try{
+            const feat = getNestedObj(root);
+            
+            switch(this.operation.operator){
+                case OperatorTypes.and:
+                    if(!this.operation.operations){
+                        return false;    
+                    }
+                    for(let i=0; i<this.operation.operations.length; i++){
+                        const pred = new Predicate({feature:this.feature,operation:this.operation.operations[i]});
+                        if(!pred.evaluate(root)){
+                            return false;
+                        }
+                    }
+                    return true;
+                case OperatorTypes.or:
+                    if(!this.operation.operations){
+                        return false;    
+                    }
+                    for(let i=0; i<this.operation.operations.length; i++){
+                        const pred = new Predicate({feature:this.feature,operation:this.operation.operations[i]});
+                        if(pred.evaluate(root)){
+                            return true;
+                        }
+                    }
+                    return false;
+                default:
+                    return testFeature(this.operation.operator, this.operation.operand ,feat);
+            }
+
+        }catch(error){
+            console.log(error);
+            return false;
+        }
+    }
+}
