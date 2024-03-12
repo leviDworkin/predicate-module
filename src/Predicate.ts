@@ -6,6 +6,10 @@ interface PredicateProp{
     operation:Operation;
 }
 
+/**
+ * Call the static method from_json with a predicate string for a feature and operation.
+ * Alternatively you can create an instance with an object of type PredicateProp to the constructor.
+ */
 export default class Predicate{
 
     private feature:string;
@@ -27,6 +31,11 @@ export default class Predicate{
         }
     }
 
+    /**
+     * 
+     * @param root Object that may contain nested objects and is the object to test the feature.
+     * @returns A boolean of whether the object matches the feature with the predicates or not.
+     */
     public evaluate(root:any):boolean{
         
         const getNestedObj = (obj:any):any=>{

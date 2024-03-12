@@ -12,24 +12,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const Predicate_1 = require("./Predicate");
 const dotenv_safe_1 = require("dotenv-safe");
 (0, dotenv_safe_1.config)();
+/**
+ * Call the static from_env() method to fetch a predicate from an endpoint at the env var base url PREDICATE_SERVICE_URL + "/api/v1/predicate"
+ * This api searches for updates to the predicate every 2 minutes. Call stopInteravl() to stop the fetching of updates
+ */
 class RemotePredicateResource {
     constructor(predicate) {
         this.UPDATE_TIME = 2000 * 60;
         this.mPredicate = predicate;
-        setInterval(() => __awaiter(this, void 0, void 0, function* () {
-            const response = yield RemotePredicateResource.fetchPredicate(`${process.env.PREDICATE_SERVICE_URL}/api/v1/predicate`);
-            if (response) {
-                const pred = yield response.text();
-                this.mPredicate = Predicate_1.default.from_json(pred);
-            }
-        }), this.UPDATE_TIME);
+        this.startInterval();
     }
     static from_env() {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 let url = process.env.PREDICATE_SERVICE_URL;
                 if (!url) {
-                    throw new Error("Invalide predicate service url");
+                    throw new Error("Invalid predicate service url");
                 }
                 url = `${url}/api/v1/predicate`;
                 const response = yield this.fetchPredicate(url);
@@ -46,15 +44,20 @@ class RemotePredicateResource {
     }
     static fetchPredicateAndStoreEtag(url) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield fetch(url);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch data: ${response.statusText}`);
+            try {
+                const response = yield fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch data: ${response.statusText}`);
+                }
+                const etag = response.headers.get('ETag');
+                if (etag) {
+                    RemotePredicateResource.ETAG = etag;
+                }
+                return response;
             }
-            const etag = response.headers.get('ETag');
-            if (etag) {
-                RemotePredicateResource.ETAG = etag;
+            catch (error) {
+                throw new Error(error);
             }
-            return response;
         });
     }
     static fetchPredicate(url) {
@@ -63,26 +66,42 @@ class RemotePredicateResource {
             if (!etag) {
                 return yield this.fetchPredicateAndStoreEtag(url);
             }
-            const response = yield fetch(url, {
-                headers: {
-                    'If-None-Match': etag,
-                },
-            });
-            if (response.status === 304) {
-                return undefined;
-            }
-            else if (response.ok) {
-                const newEtag = response.headers.get('ETag');
-                if (newEtag) {
-                    RemotePredicateResource.ETAG = newEtag;
+            try {
+                const response = yield fetch(url, {
+                    headers: {
+                        'If-None-Match': etag,
+                    },
+                });
+                if (response.status === 304) {
+                    return undefined;
                 }
-                console.log("updated the etag", newEtag);
-                return response;
+                else if (response.ok) {
+                    const newEtag = response.headers.get('ETag');
+                    if (newEtag) {
+                        RemotePredicateResource.ETAG = newEtag;
+                    }
+                    return response;
+                }
+                else {
+                    throw new Error(`Failed to fetch data: ${response.statusText}`);
+                }
             }
-            else {
-                throw new Error(`Failed to fetch data: ${response.statusText}`);
+            catch (error) {
+                throw new Error(error);
             }
         });
+    }
+    startInterval() {
+        this.mInterval = setInterval(() => __awaiter(this, void 0, void 0, function* () {
+            const response = yield RemotePredicateResource.fetchPredicate(`${process.env.PREDICATE_SERVICE_URL}/api/v1/predicate`);
+            if (response) {
+                const pred = yield response.text();
+                this.mPredicate = Predicate_1.default.from_json(pred);
+            }
+        }), this.UPDATE_TIME);
+    }
+    stopInterval() {
+        clearInterval(this.mInterval);
     }
     get predicate() {
         return this.mPredicate;

@@ -1,6 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const OperatorTypes_1 = require("./OperatorTypes");
+/**
+ * Call the static method from_json with a predicate string for a feature and operation.
+ * Alternatively you can create an instance with an object of type PredicateProp to the constructor.
+ */
 class Predicate {
     constructor({ feature, operation }) {
         this.feature = feature;
@@ -15,6 +19,11 @@ class Predicate {
             throw new Error("Parsing Json failed, please verify the predicate json string is valid");
         }
     }
+    /**
+     *
+     * @param root Object that may contain nested objects and is the object to test the feature.
+     * @returns A boolean of whether the object matches the feature with the predicates or not.
+     */
     evaluate(root) {
         const getNestedObj = (obj) => {
             if (this.featureArr.length === 0) {
