@@ -1,8 +1,9 @@
 {
   "license":"MIT",
+  "type": "commonjs",
   "scripts": {
     "prepare": "yarn run build-ts",
-    "build-ts": "tsc index.ts",
+    "build-ts": "tsc",
     "build": "yarn run build-ts"
   },
   "devDependencies": {
